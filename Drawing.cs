@@ -1,21 +1,28 @@
 namespace ConsoleApp1;
 
+
+
 public static class Drawing
 {
-    static readonly List<GameObject> drawn = [];
-    public static void Draw(v2 a, v2 b)
+    public static List<Piece> Draw(v2 a, v2 b)
     {
-        for (int i = drawn.Count - 1; i >= 0; i--)
+        List<Piece> output = new();
+
+        bool alt = Math.Abs(a.x - b.x) < Math.Abs(a.y - b.y);
+            
+        var result = CastLine(a, b, _ => Piece.All.Any(__ => __.Pos == _ && __.IsDense && __ != Game.Player));
+        result.ForEach(_ =>
         {
-            drawn[i].Destroy();
-            drawn.RemoveAt(i);
-        }
-        
-        var result = CastLine(a, b);
-        result.ForEach(_ => drawn.Add(Spawning.Spawn(Spawning.Prefabs.Line, _)));
+            var item = Spawning.Spawn(Spawning.Prefabs.Line, _);
+            item.Appearance = new(!alt ? '╴' : '╷', ConsoleColor.Yellow);
+            output.Add(item);
+        });
+
+        return output;
     }
-    
-    static List<v2> CastLine(v2 a, v2 b)
+
+    public delegate bool pred(v2 at);
+    static List<v2> CastLine(v2 a, v2 b, pred? StopCondition = null)
     {
         List<v2> path = [];
         
@@ -60,6 +67,9 @@ public static class Drawing
         for (int i = 0; i <= longest; i++)
         {
             path.Add(new (a.x,a.y));
+            if (StopCondition is { } __ && __(new(a.x, a.y)))
+                return path;
+            
             numerator += shortest;
             if (numerator >= longest)
             {
@@ -75,5 +85,43 @@ public static class Drawing
         }
 
         return path;
+    }
+
+    static readonly string thinSet = "└┐┌┘│─";
+    static readonly string thickSet = "╚╗╔╝║═";
+    
+    public static void CreateUI(v2 min, v2 max, bool thick = false)
+    {
+        for (int x = min.x; x <= max.x; x++)
+        {
+            for (int y = min.y; y <= max.y; y++)
+            {
+                v2 c = new v2(x, y);
+
+                char s = ' ';
+
+                string charSet = !thick ? thinSet : thickSet;
+                
+                if (c == min)
+                    s = charSet[0];
+                else if (c == max)
+                    s = charSet[1];
+                else if (c.x == min.x && c.y == max.y)
+                    s = charSet[2];
+                else if (c.y == min.y && c.x == max.x)
+                    s = charSet[3];
+                else if (c.x == min.x || c.x == max.x)
+                    s = charSet[4];
+                else if (c.y == min.y || c.y == max.y)
+                    s = charSet[5];
+                
+                new Piece
+                {
+                    _pos = c,
+                    Appearance = new(s),
+                    Order = 5
+                };
+            }
+        }
     }
 }

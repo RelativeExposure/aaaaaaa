@@ -7,4 +7,9 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
+    <ItemGroup>
+      <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+      <PackageReference Include="SpaceWizards.Lidgren.Network" Version="0.3.0" />
+    </ItemGroup>
+
 </Project>

@@ -1,8 +1,11 @@
 {
   "version": 2,
-  "dgSpecHash": "BRCeKOkoyjZqKDQtCh0dcA0K/tvMY0MKWKD8W9SeR2iwz90s0PSl7hKhphjRBDzdEhY43c3pDj1eRX+lchY1QA==",
+  "dgSpecHash": "1WCtICbpH4wrE30IxuM2w83KZXn1p9etfjyKKqMm6hahPWO+c7GO95NitrRZRBrEzJ/Mfv73ABz9pZkue5RZQw==",
   "success": true,
   "projectFilePath": "C:\\Users\\Stagaire\\RiderProjects\\ConsoleApp1\\ConsoleApp1.csproj",
-  "expectedPackageFiles": [],
+  "expectedPackageFiles": [
+    "C:\\Users\\Stagaire\\.nuget\\packages\\newtonsoft.json\\13.0.3\\newtonsoft.json.13.0.3.nupkg.sha512",
+    "C:\\Users\\Stagaire\\.nuget\\packages\\spacewizards.lidgren.network\\0.3.0\\spacewizards.lidgren.network.0.3.0.nupkg.sha512"
+  ],
   "logs": []
 }

@@ -2,7 +2,7 @@ namespace ConsoleApp1;
 
 static class Spawning
 {
-    public static GameObject Spawn(Prefabs which, v2 at)
+    public static Piece Spawn(Prefabs which, v2 at)
     {
         var created = Prefab[which].Clone();
         created._pos = at;
@@ -15,9 +15,10 @@ static class Spawning
         Player,
         Wall,
         Window,
-        Line
+        Line,
+        Pointer,
     }
-    static readonly Dictionary<Prefabs, GameObject> Prefab = new()
+    static readonly Dictionary<Prefabs, Piece> Prefab = new()
     {
         {
             Prefabs.Grass, new()
@@ -32,7 +33,7 @@ static class Spawning
                 _pos = new(-999,-999),
                 Appearance = new ('P', ConsoleColor.White),
                 IsDense = true,
-                Order = 1,
+                Order = 2,
             }
         },
         {
@@ -57,9 +58,19 @@ static class Spawning
             Prefabs.Line, new()
             {
                 _pos = new(-999,-999),
-                Appearance = new ('═', ConsoleColor.DarkCyan),
+                Appearance = new (' ', ConsoleColor.DarkCyan),
+                IsDense = false,
+                Order = 1,
+            }
+        },
+        {
+            Prefabs.Pointer, new()
+            {
+                _pos = new(-999,-999),
+                Appearance = new ('X', ConsoleColor.White),
                 IsDense = false,
                 Order = 3,
+                IgnoreCollision = true
             }
         },
     };

@@ -1,6 +1,7 @@
 namespace ConsoleApp1;
 
 using System.Collections;
+using System.Text.Json;
 using static Visuals;
 
 public struct Map : IEnumerable<List<char>>
@@ -37,17 +38,35 @@ public struct Map : IEnumerable<List<char>>
     public void Add(List<char> c) => map.Add(c);
 }
 
-public class GameObject
+
+public class PieceSet
 {
-    public static readonly List<GameObject> All = [];
-    public GameObject() => All.Add(this);
-        
+    public List<Piece> Pieces;
+    public v2 CommonPos
+    {
+        get => Pieces[0]._pos;
+        set => Pieces.ForEach(_ => _._pos += (value - CommonPos));
+    }
+}
+
+public class Piece
+{
+    public static readonly List<Piece> All = [];
+
+    public Piece()
+    {
+        ID = new Random().Next(int.MinValue, int.MaxValue);
+        while(All.Any(_ => _.ID == ID))
+            ID = new Random().Next(int.MinValue, int.MaxValue);
+        All.Add(this);
+    }
+
     public v2 Pos
     {
         get => _pos;
         set
         {
-            if (All.Any(_ => _.IsDense && _.Pos == value))
+            if (!IgnoreCollision && All.Any(_ => _.IsDense && _.Pos == value))
                 return;
             _pos = value;
         }
@@ -56,23 +75,27 @@ public class GameObject
     public ColorChar Appearance;
     public int Order = 0;
     public bool IsDense = false;
+    public bool IgnoreCollision = false;
+    public int ID;
     
-    public GameObject Clone() => new GameObject()
+    public Piece Clone() => new Piece()
     {
         Appearance = Appearance,
         _pos = _pos,
+        Order = Order,
         IsDense = IsDense,
-        Order = Order
+        IgnoreCollision = IgnoreCollision,
+        ID = ID
     };
     public void Destroy() => All.Remove(this);
 }
 
-abstract class Component(GameObject owner)
+abstract class Component(Piece owner)
 {
-    public GameObject Owner = owner;
+    public Piece Owner = owner;
 }
 
-class Animator(GameObject owner) : Component(owner)
+class Animator(Piece owner) : Component(owner)
 {
     
 }
