@@ -78,14 +78,13 @@ public class Piece
     public bool IgnoreCollision = false;
     public int ID;
     
-    public Piece Clone() => new Piece()
+    public Piece Clone() => new()
     {
         Appearance = Appearance,
         _pos = _pos,
         Order = Order,
         IsDense = IsDense,
         IgnoreCollision = IgnoreCollision,
-        ID = ID
     };
     public void Destroy() => All.Remove(this);
 }

@@ -1,6 +1,4 @@
-﻿using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
-using Lidgren.Network;
+﻿using Lidgren.Network;
 using System.Text;
 
 namespace ConsoleApp1;
@@ -21,15 +19,10 @@ public struct v2(int x, int y)
 
 static class Game
 {
-    static NetClient? client;
-    static NetServer? server;
-    static bool isClient => client != null;
-    static bool isServer => server != null;
-    
     static v2 Camera = new (0,0);
     public static Piece? Player;
     static Piece Pointer;
-    static Piece wall;
+    static Piece? movingWall;
 
     static int WallsRemaining
     {
@@ -44,14 +37,17 @@ static class Game
     public static int Time;
 
     static int LastShootTime = -99;
+    static int LastMoveTime = -99;
+    static int LastCursorMoveTime = -99;
     
     static void Update()
     {
-        if (Player == null || !Tools.ApplicationIsActivated())
+        if (Player == null)
             return;
         
         {
             v2 offset = new v2(0, 0);
+            
             if (IsPressed('W'))
                 offset += new v2(0, 1);
             if (IsPressed('A'))
@@ -60,12 +56,21 @@ static class Game
                 offset += new v2(0, -1);
             if (IsPressed('D'))
                 offset += new v2(1, 0);
-            Player.Pos += offset;
-            SendMove(Player);
-            Pointer.Pos += offset;
+
+            if (offset != new v2(0, 0) && Time - LastMoveTime > 5)
+            {
+                LastMoveTime = Time;
+                
+                Player.Pos += offset;
+                Player.NetMove();
+                
+                Pointer.Pos += offset;
+            }
         }
+        
         {
             v2 offset = new v2(0, 0);
+            
             if (IsPressed("\x25\x26\x27\x28"[1]))
                 offset += new v2(0, 2);
             if (IsPressed("\x25\x26\x27\x28"[0]))
@@ -74,7 +79,12 @@ static class Game
                 offset += new v2(0, -2);
             if (IsPressed("\x25\x26\x27\x28"[2]))
                 offset += new v2(2, 0);
-            Pointer.Pos += offset;
+
+            if (offset != new v2(0, 0) && Time - LastCursorMoveTime > 1)
+            {
+                LastCursorMoveTime = Time;
+                Pointer.Pos += offset;
+            }
         }
         
         if (IsPressed('P') && WallsRemaining > 0)
@@ -83,144 +93,77 @@ static class Game
             WallsRemaining--;
         }
         
-        if (IsPressed('F') & Time - LastShootTime > 5)
+        if (IsPressed('F') & Time - LastShootTime > 15)
         {
             LastShootTime = Time;
 
             var dir = Pointer.Pos - Player.Pos;
-            while (dir.Magnitude < 100)
+            while (dir.Magnitude < 50)
                 dir += dir;
             
             var objs = Drawing.Draw(Player.Pos, Player.Pos + dir);
+            objs.NetSpawn();
             
             new Action(() =>
             {
                 for (int i = objs.Count - 1; i >= 0; i--)
                 {
                     objs[i].Destroy();
+                    objs[i].NetDestroy();
                     objs.RemoveAt(i);
                 }
             }).Time(10);
         }
 
-        if (Time % 3 == 0)
+        if (movingWall != null && Time % 25 == 0)
         {
-            wall.Pos += new v2(1, 0);
-            SendMove(wall);
+            movingWall.Pos += new v2(1, 0);
+            movingWall.NetMove();
         }
         
         // camera follow
         Camera = Player.Pos;
     }
 
-    static void ReceivedMessage(string s)
-    {
-        //Console.WriteLine("Received message: " + s);
-        
-        string[] args = s.Split(' ');
-        
-        if (args[0] == "spawn")
-        {
-            Piece spawned = args[1].Deserialize<Piece>()!;
-        }
-        else if (args[0] == "move")
-        {
-            if (Piece.All.FirstOrDefault(_ => _.ID == Convert.ToInt32(args[1])) is { } found)
-                found._pos = args[2].Deserialize<v2>();
-        }
-    }
-
-    static void SendMove(Piece p) => SendMessage("move " + p.ID + " " + p._pos.Serialize());
-
-    static void SendSpawn(Piece p)
-    {
-        string str = p.Serialize();
-        SendMessage("spawn " + str);  
-    } 
     
-    static void 
-    static void SendMessage(string[] s)
-    {
-        if (isClient)
-        {
-            var msg = client.CreateMessage();
-            msg.Write(s.Serialize());
-            client.SendMessage(msg, NetDeliveryMethod.ReliableOrdered, 0);
-        }
-        else if (isServer)
-        {
-            var msg = server.CreateMessage();
-            msg.Write(s.Serialize());
-            server.SendToAll(msg, NetDeliveryMethod.ReliableOrdered, 0);
-        }
-    }
     
-    public static void NetSetup()
-    {
-        RETRY:
-        string[]? command = Console.ReadLine()?.Split(' ');
-        if (command?[0] == "host")
-        {
-            var config = new NetPeerConfiguration("consoleGame");
-            config.Port = 7777;
-            config.MaximumConnections = 999;
-            server = new NetServer(config);
-            server.Start();
-            
-            new Thread(() =>
-            {
-                while (true)
-                {
-                    var message = server.ReadMessage();
-                    if (message == null) continue;
-                    ReceivedMessage(message.ReadString());
-                }
-            }).Start();
-        }
-        else if (command?[0] == "join")
-        {
-            client = new NetClient(new NetPeerConfiguration("consoleGame"));
-            client.Start();
-            client.Connect(command[1], 7777);
-
-            new Thread(() =>
-            {
-                while (true)
-                {
-                    var message = client.ReadMessage();
-                    if (message == null) continue;
-                    ReceivedMessage(message.ReadString());
-                }
-            }).Start();
-        }
-        else goto RETRY;
-    }
+    
     
     public static void Main()
-    
-     {
+    {
+        Input.OurTitle = new Random().Next(0, 999).ToString();
+
+        new Thread(() =>
+        {
+            while (true)
+            {
+                Thread.Sleep(5);
+                Console.Title = OurTitle;
+            }
+        }).Start();
+            
+            
         Console.OutputEncoding = Encoding.Unicode;
         Console.BufferWidth += 45;
         Console.WindowWidth += 45;
         Console.CursorVisible = false;
-        
-        NetSetup();
 
-        if (isServer)
+        NetTools.NetSetup();
+
+        if (NetTools.isServer)
         {
             // wait till someone connects
-            while (server.ConnectionsCount == 0) { }
+            while (NetTools.server.ConnectionsCount == 0)
+            {
+            }
 
             for (int x = 0; x < 10; x++)
             for (int y = 0; y < 10; y++)
             {
                 var a = Spawn(Prefabs.Grass, new(x, y));
-                SendSpawn(a);
+                a.NetSpawn();
             }
-
-            Player = Spawn(Prefabs.Player, new(0, 0));
-            Pointer = Spawn(Prefabs.Pointer, new(0, 0));
-
+            
             // some walls
             List<Piece> walls =
             [
@@ -230,18 +173,24 @@ static class Game
                 Spawn(Prefabs.Wall, new(0, 1)),
                 Spawn(Prefabs.Wall, new(0, 0)),
             ];
-            wall = walls[0];
-
-            //Drawing.CreateUI(new(5, 5), new(10, 10));
+            walls.NetSpawn();
+            movingWall = walls[0];
             
-            // spawn all
-            walls.ForEach(SendSpawn);
+            Drawing.CreateUI(new(5, 5), new(10, 10))
+                .NetSpawn();
         }
+
+        
+        
+        Player = Spawn(Prefabs.Player, new(0, 0));
+        Pointer = Spawn(Prefabs.Pointer, new(0, 0));
+        Player.NetSpawn();
 
         new Thread(() =>
         {
             while (true)
             {
+                NetTools.NetUpdate();
                 Update();
                 Render();
                 Time++;
@@ -292,7 +241,7 @@ static class Game
             desired.Add(new());
             
             for (int y = Camera.x - 45; y < Camera.x + 45; y++)
-            {
+            {   
                 if (Piece.All.ToList().Where(_ => _.Pos == new v2(y, -x)).OrderBy(_ => _.Order).LastOrDefault() is { } found)
                     desired[^1].Add(found.Appearance);
                 else
